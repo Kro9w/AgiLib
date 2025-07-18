@@ -1,7 +1,20 @@
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'firebase_options.dart';
+import 'signup_page.dart';
+import 'login_page.dart';
 
-void main() {
+final database = FirebaseDatabase.instanceFor(
+  app: Firebase.app(),
+  databaseURL: "https://agilib-29cf3-default-rtdb.asia-southeast1.firebasedatabase.app",
+);
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const AgiLib());
 }
 
@@ -17,7 +30,60 @@ class AgiLib extends StatelessWidget {
         highlightColor: Colors.transparent,
         splashFactory: NoSplash.splashFactory,
       ),
-      home: const HomePage(),
+      home: const AuthGate(),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return snapshot.hasData ? const HomePage() : const AuthSelectionPage();
+      },
+    );
+  }
+}
+
+class AuthSelectionPage extends StatelessWidget {
+  const AuthSelectionPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              },
+              child: const Text("Login"),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignupPage()),
+                );
+              },
+              child: const Text("Signup"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -144,11 +210,49 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-    // Dynamic Greeting
-    String _getGreeting() {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String fullName = "User";
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserData();
+  }
+
+  Future<void> fetchUserData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid != null) {
+      final ref = database.ref().child('users/$uid');
+      final snapshot = await ref.get();
+
+      if (snapshot.exists) {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+
+        setState(() {
+          fullName = "${data['name']} ${data['surname']}";
+          loading = false;
+        });
+      } else {
+        setState(() {
+          fullName = "User";
+          loading = false;
+        });
+      }
+    } else {
+      // UID is null, do nothing for nao
+    }
+  }
+
+  String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
       return 'Good Morning,';
@@ -183,51 +287,47 @@ class HomeScreen extends StatelessWidget {
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      SizedBox(height: 10),
-                      CircleAvatar(
+                    children: [
+                      const SizedBox(height: 10),
+                      const CircleAvatar(
                         radius: 30,
                         backgroundColor: Colors.grey,
                         child: Icon(Icons.person, color: Colors.black),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       Text(
-                        "Dexter G. Decano",
-                        style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.none),
+                        fullName,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.none),
                       ),
-                      SizedBox(height: 5),
-                      Text(
+                      const SizedBox(height: 5),
+                      const Text(
                         "CICS",
                         style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.none),
                       ),
-                      SizedBox(height: 5),
-                      Text(
+                      const SizedBox(height: 5),
+                      const Text(
                         "22-10055",
                         style: TextStyle(fontSize: 12, color: Colors.grey, decoration: TextDecoration.none),
                       ),
-
-                      SizedBox(height: 20),
-
-                      Divider(
-                        thickness: 1,
-                        color: Colors.grey
-                      ),
-
-                      SizedBox(height: 20),
-
-                      Text(
+                      const SizedBox(height: 20),
+                      const Divider(thickness: 1, color: Colors.grey),
+                      const SizedBox(height: 20),
+                      const Text(
                         "Profile",
                         style: TextStyle(fontSize: 15, color: Colors.black, decoration: TextDecoration.none),
                       ),
-                      SizedBox(height: 50),
-                      Text(
+                      const SizedBox(height: 50),
+                      const Text(
                         "Library Card",
                         style: TextStyle(fontSize: 15, color: Colors.black, decoration: TextDecoration.none),
                       ),
-                      SizedBox(height: 50),
-                      Text(
-                        "Logout",
-                        style: TextStyle(fontSize: 15, color: Colors.black, decoration: TextDecoration.none),
+                      const SizedBox(height: 50),
+                      GestureDetector(
+                        onTap: () => FirebaseAuth.instance.signOut(),
+                        child: const Text(
+                          "Logout",
+                          style: TextStyle(fontSize: 15, color: Colors.black, decoration: TextDecoration.none),
+                        ),
                       ),
                     ],
                   ),
@@ -262,16 +362,15 @@ class HomeScreen extends StatelessWidget {
                           fontWeight: FontWeight.normal,
                         ),
                       ),
-                      const Text(
-                        'Dexter!',
-                        style: TextStyle(
+                      Text(
+                        '$fullName!',
+                        style: const TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
-
                   GestureDetector(
                     onTap: () => showUserPopupMenu(context),
                     child: CircleAvatar(
@@ -291,9 +390,7 @@ class HomeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -306,9 +403,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 20),
-
                   Expanded(
                     child: Container(
                       height: 120,

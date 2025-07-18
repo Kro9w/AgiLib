@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "233874385422",
+    "project_id": "agilib-29cf3",
+    "storage_bucket": "agilib-29cf3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:233874385422:android:6b03549c20f6266ad82a5f",
+        "android_client_info": {
+          "package_name": "com.example.agilib"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy6jiVv_Ylk9xSSbxDl0hHeOv1K_B3ank"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
